@@ -3,19 +3,14 @@ package com.example.crud.controllers;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.crud.domain.product.Product;
-import com.example.crud.domain.product.ProductRepository;
 import com.example.crud.domain.product.RequestProductDTO;
-import com.example.crud.infra.RequestsExceptionHandler;
+import com.example.crud.services.product.ProductService;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,43 +25,35 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RequestMapping("/product")
 public class ProductController {
     @Autowired
-    private ProductRepository repository;
+    private ProductService productService;
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
-        var allProducts = repository.findAllByActiveTrue();
+        var allProducts = productService.getAllProducts();
         return ResponseEntity.ok(allProducts);
     }
 
     @PostMapping
-    public ResponseEntity<String> registerProduct(@RequestBody @Valid RequestProductDTO data) {
-        Product newProduct = new Product(data);
-        System.out.println(data);
-        repository.save(newProduct);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Product> registerProduct(@RequestBody @Valid RequestProductDTO data) {
+        Product response = productService.registerProduct(data);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping
     @Transactional
     public ResponseEntity<Product> updateProduct(@RequestBody @Valid RequestProductDTO data) {
-        Optional<Product> optionalProduct = repository.findById(data.id());
-        if (optionalProduct.isPresent()) {
-            Product product = optionalProduct.get();
-            product.setName(data.name());
-            product.setPrice_in_cents(data.price_in_cents());
-            return ResponseEntity.ok(product);
+        var response = productService.updateProduct(data);
+        if (response) {
+            return ResponseEntity.ok().build();
         }
         throw new EntityNotFoundException();
-
     }
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<String> deleteProduct(@PathVariable String id) {
-        Optional<Product> optionalProduct = repository.findById(id);
-        if (optionalProduct.isPresent()) {
-            Product product = optionalProduct.get();
-            product.setActive(false);
+    public ResponseEntity<Void> deleteProduct(@PathVariable String id) {
+        var response = productService.deleteProduct(id);
+        if (response) {
             return ResponseEntity.noContent().build();
         }
         throw new EntityNotFoundException();
